@@ -1,0 +1,3 @@
+# Core dependencies (minimal since we mostly use standard library)
+typing-extensions>=4.0.0  # For improved type hints in Python 3.7+
+    
