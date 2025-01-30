@@ -1,9 +1,9 @@
 from typing import List, Optional, Set, Tuple
 from dataclasses import dataclass
 import heapq
-from  common.board import Board, Direction
-from  common.utils import ColoredText, Config, with_delay
-from  solvers.solver import Solver, SolutionInfo
+from common.board import Board, Direction
+from common.utils import ColoredText, Config, with_delay
+from solvers.solver import Solver, SolutionInfo
 
 
 @dataclass
@@ -189,22 +189,19 @@ class AStarSolver(Solver):
         print(current.display())
 
         print("\nPossible moves from this state:")
-        for direction, new_state, quality, reason in moves:
+        for direction, new_state, quality, _ in moves:
             move_str = {
                 Direction.UP: "Up   ",
                 Direction.DOWN: "Down ",
                 Direction.LEFT: "Left ",
                 Direction.RIGHT: "Right",
             }[direction]
-
-            if quality == "BEST":
-                colored_move = ColoredText.green(f"{move_str} [{quality}]")
-            elif quality == "MID":
-                colored_move = ColoredText.yellow(f"{move_str} [{quality}]")
-            else:
-                colored_move = ColoredText.red(f"{move_str} [{quality}]")
-
-            print(f"- {colored_move} | {reason}")
+            selected = (
+                "=> Selected"
+                if quality != "BAD" and tuple(new_state.state) not in closed_set
+                else ""
+            )
+            print(f"- {move_str} {selected}")
 
         print(f"States explored: {len(closed_set)}")
         print(f"Nodes visited: {nodes_visited}")

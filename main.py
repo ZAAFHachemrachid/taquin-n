@@ -114,11 +114,7 @@ def main() -> None:
     }[algorithm](board)
 
     # Attempt to solve
-    solution = solver.solve()
-    if solution is None:
-        print(ColoredText.red("\nNo solution found!"))
-    else:
-        print_solution(solution, board)
+    solver.solve()
 
 
 if __name__ == "__main__":
