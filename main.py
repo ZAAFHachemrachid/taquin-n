@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-import os
-import sys
 from typing import List, Optional
 
-# Add the parent directory to Python path to make the package importable
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from taquin.common import Board
-from taquin.common.utils import ColoredText, Config
-from taquin.solvers import DFSSolver, BFSSolver, AStarSolver, SolutionInfo
+from common.board import Board
+from common.utils import ColoredText, Config
+from solvers.solver import SolutionInfo
+from solvers.dfs import DFSSolver
+from solvers.bfs import BFSSolver
+from solvers.astar import AStarSolver
 
 
 def print_solution(solution: SolutionInfo, board: Board) -> None:
@@ -117,9 +115,10 @@ def main() -> None:
 
     # Attempt to solve
     solution = solver.solve()
-    # if not solution:
     if solution is None:
         print(ColoredText.red("\nNo solution found!"))
+    else:
+        print_solution(solution, board)
 
 
 if __name__ == "__main__":

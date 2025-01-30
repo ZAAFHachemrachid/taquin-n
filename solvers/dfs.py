@@ -1,8 +1,8 @@
 from typing import List, Optional, Set, Tuple
 from dataclasses import dataclass
-from taquin.common.board import Board, Direction
-from taquin.common.utils import ColoredText, Config, with_delay
-from taquin.solvers.solver import Solver, SolutionInfo
+from  common.board import Board, Direction
+from  common.utils import ColoredText, Config, with_delay
+from  solvers.solver import Solver, SolutionInfo
 
 
 @dataclass
