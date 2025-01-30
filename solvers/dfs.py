@@ -127,17 +127,9 @@ class DFSSolver(Solver):
         current: State, next_state: State, visited: Set[Tuple[int, ...]]
     ) -> Tuple[str, str]:
         """Evaluate a potential move and provide debug information."""
-        current_dist = current.manhattan_distance()
-        new_dist = next_state.manhattan_distance()
-
         if tuple(next_state.state) in visited:
             return "BAD", "Already visited"
-        elif new_dist < current_dist:
-            return "BEST", f"Manhattan distance: {current_dist} -> {new_dist}"
-        elif new_dist == current_dist:
-            return "MID", f"Manhattan distance unchanged: {current_dist}"
-        else:
-            return "BAD", f"Manhattan distance: {current_dist} -> {new_dist}"
+        return "VALID", "New state"
 
     @with_delay
     def debug_print(
