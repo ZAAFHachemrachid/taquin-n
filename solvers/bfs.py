@@ -1,9 +1,9 @@
-from typing import List, Optional, Set, Tuple, Dict
+from typing import List, Optional, Set, Tuple
 from dataclasses import dataclass
 from collections import deque
 from common.board import Board, Direction
 from common.utils import ColoredText, Config, with_delay
-from solvers.solver import Solver, SolutionInfo
+from solvers.solver import Solver, SolutionInfo, SolutionStatus
 
 
 @dataclass
@@ -169,15 +169,24 @@ class BFSSolver(Solver):
             optimal_length: Optional known optimal solution length
 
         Returns:
-            SolutionInfo if solution is found, None otherwise
+            SolutionInfo containing solution status and path if found
         """
+        # Check if puzzle is already solved
+        initial_state = State.from_board(self.initial_board)
+        if initial_state.is_goal():
+            print(ColoredText.green("\n🎉 PUZZLE ALREADY SOLVED! 🎉"))
+            return SolutionInfo(status=SolutionStatus.ALREADY_SOLVED)
+
+        # Check if puzzle is solvable
+        if not self.is_solvable():
+            print(ColoredText.red("\n❌ PUZZLE IS UNSOLVABLE! ❌"))
+            return SolutionInfo(status=SolutionStatus.UNSOLVABLE)
+
         queue = deque()  # Queue of (state, level) pairs
         visited = set()  # Set of visited states
         nodes_visited = 0
         current_level = 0
 
-        # Initialize starting state
-        initial_state = State.from_board(self.initial_board)
         queue.append((initial_state, 0))  # (state, level)
         visited.add(tuple(initial_state.state))
 
@@ -206,7 +215,11 @@ class BFSSolver(Solver):
             if current_state.is_goal():
                 print(ColoredText.green("\n🎉 GOAL STATE REACHED! 🎉"))
                 print(f"BFS: Visited {nodes_visited} nodes")
-                return SolutionInfo(current_state.path, optimal_length)
+                return SolutionInfo(
+                    status=SolutionStatus.SOLVED,
+                    moves=current_state.path,
+                    optimal_length=optimal_length,
+                )
 
             # Skip if we've exceeded max depth
             if level >= self.max_depth:
@@ -219,4 +232,5 @@ class BFSSolver(Solver):
                     visited.add(tuple(next_state.state))
                     queue.append((next_state, level + 1))
 
-        return None  # No solution found
+        print(ColoredText.yellow("\n⚠️ NO SOLUTION FOUND! ⚠️"))
+        return SolutionInfo(status=SolutionStatus.NO_SOLUTION)

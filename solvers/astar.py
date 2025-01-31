@@ -2,8 +2,8 @@ from typing import List, Optional, Set, Tuple
 from dataclasses import dataclass
 import heapq
 from common.board import Board, Direction
-from common.utils import ColoredText, Config, with_delay
-from solvers.solver import Solver, SolutionInfo
+from common.utils import ColoredText, with_delay
+from solvers.solver import Solver, SolutionInfo, SolutionStatus
 
 
 @dataclass
@@ -214,9 +214,19 @@ class AStarSolver(Solver):
             optimal_length: Optional known optimal solution length
 
         Returns:
-            SolutionInfo if solution is found, None otherwise
+            SolutionInfo containing solution status and path if found
         """
+        # Check if puzzle is already solved
         initial_state = State.from_board(self.initial_board)
+        if initial_state.is_goal():
+            print(ColoredText.green("\n🎉 PUZZLE ALREADY SOLVED! 🎉"))
+            return SolutionInfo(status=SolutionStatus.ALREADY_SOLVED)
+
+        # Check if puzzle is solvable
+        if not self.is_solvable():
+            print(ColoredText.red("\n❌ PUZZLE IS UNSOLVABLE! ❌"))
+            return SolutionInfo(status=SolutionStatus.UNSOLVABLE)
+
         open_set = []  # Priority queue of states to explore
         closed_set = set()  # Set of visited states
         nodes_visited = 0
@@ -248,7 +258,11 @@ class AStarSolver(Solver):
             if current_state.is_goal():
                 print(ColoredText.green("\n🎉 GOAL STATE REACHED! 🎉"))
                 print(f"A*: Visited {nodes_visited} nodes")
-                return SolutionInfo(current_state.path, optimal_length)
+                return SolutionInfo(
+                    status=SolutionStatus.SOLVED,
+                    moves=current_state.path,
+                    optimal_length=optimal_length,
+                )
 
             # Add current state to closed set
             closed_set.add(tuple(current_state.state))
@@ -258,4 +272,5 @@ class AStarSolver(Solver):
                 if quality != "BAD" and tuple(next_state.state) not in closed_set:
                     heapq.heappush(open_set, next_state)
 
-        return None  # No solution found
+        print(ColoredText.yellow("\n⚠️ NO SOLUTION FOUND! ⚠️"))
+        return SolutionInfo(status=SolutionStatus.NO_SOLUTION)

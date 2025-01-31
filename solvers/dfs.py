@@ -2,7 +2,7 @@ from typing import List, Optional, Set, Tuple
 from dataclasses import dataclass
 from common.board import Board, Direction
 from common.utils import ColoredText, Config, with_delay
-from solvers.solver import Solver, SolutionInfo
+from solvers.solver import Solver, SolutionInfo, SolutionStatus
 
 
 @dataclass
@@ -160,62 +160,136 @@ class DFSSolver(Solver):
 
         print(f"Total states visited: {len(visited)}")
 
+    def get_ordered_moves(self, state: State) -> List[Direction]:
+        """Get list of possible moves in a fixed priority order."""
+        # Fixed priority ordering favoring UP and LEFT moves first
+        priority = [Direction.UP, Direction.LEFT, Direction.DOWN, Direction.RIGHT]
+
+        possible = state.get_possible_moves()
+        # Return moves in priority order if they are possible
+        return [move for move in priority if move in possible]
+
+    def is_reverse_move(
+        self, last_move: Optional[Direction], new_move: Direction
+    ) -> bool:
+        """Check if a move reverses the previous move."""
+        if last_move is None:
+            return False
+        return (
+            (last_move == Direction.UP and new_move == Direction.DOWN)
+            or (last_move == Direction.DOWN and new_move == Direction.UP)
+            or (last_move == Direction.LEFT and new_move == Direction.RIGHT)
+            or (last_move == Direction.RIGHT and new_move == Direction.LEFT)
+        )
+
+    def dfs_with_depth_limit(
+        self,
+        state: State,
+        visited: Set[Tuple[int, ...]],
+        current_path: Set[Tuple[int, ...]],
+        depth_limit: int,
+        nodes_visited: int,
+    ) -> Tuple[Optional[State], int]:
+        """DFS with depth limit, cycle detection, and state tracking."""
+        if state.is_goal():
+            return state, nodes_visited
+
+        if len(state.path) >= depth_limit:
+            return None, nodes_visited
+
+        # Get last move to prevent reversals
+        last_move = state.path[-1] if state.path else None
+
+        # Try moves in optimized order (based on Manhattan distance)
+        moves_to_try = self.get_ordered_moves(state)
+
+        # Debug output - show all potential moves
+        possible_moves = []
+        for direction in moves_to_try:
+            if next_state := state.make_move(direction):
+                next_state_tuple = tuple(next_state.state)
+                quality = (
+                    "VALID"
+                    if not self.is_reverse_move(last_move, direction)
+                    and next_state_tuple not in current_path
+                    and next_state_tuple not in visited
+                    else "BAD"
+                )
+                possible_moves.append((direction, next_state, quality, "New state"))
+        self.debug_print(state, possible_moves, visited, len(state.path))
+
+        # Actually try the valid moves
+        for direction in moves_to_try:
+            # Skip reverse moves
+            if self.is_reverse_move(last_move, direction):
+                continue
+
+            if next_state := state.make_move(direction):
+                next_state_tuple = tuple(next_state.state)
+
+                # Skip if state is in current path or globally visited
+                if next_state_tuple in current_path or next_state_tuple in visited:
+                    continue
+
+                nodes_visited += 1
+                visited.add(next_state_tuple)
+                current_path.add(next_state_tuple)
+
+                result, nodes_visited = self.dfs_with_depth_limit(
+                    next_state, visited, current_path, depth_limit, nodes_visited
+                )
+
+                if result is not None:
+                    return result, nodes_visited
+
+                current_path.remove(next_state_tuple)
+
+        return None, nodes_visited
+
     def solve(self, optimal_length: Optional[int] = None) -> Optional[SolutionInfo]:
         """
-        Find a solution using Depth-First Search with debug output.
+        Find a solution using iterative deepening DFS with optimizations.
 
         Args:
             optimal_length: Optional known optimal solution length
 
         Returns:
-            SolutionInfo if solution is found, None otherwise
+            SolutionInfo containing solution status and path if found
         """
-        stack = []  # Stack of states to explore
-        visited = set()  # Set of visited states
-        nodes_visited = 0
-
-        # Initialize starting state
+        # Check if puzzle is already solved
         initial_state = State.from_board(self.initial_board)
-        stack.append(initial_state)
-        visited.add(tuple(initial_state.state))
+        if initial_state.is_goal():
+            print(ColoredText.green("\n🎉 PUZZLE ALREADY SOLVED! 🎉"))
+            return SolutionInfo(status=SolutionStatus.ALREADY_SOLVED)
 
-        while stack:
-            current_state = stack.pop()
-            nodes_visited += 1
+        # Check if puzzle is solvable
+        if not self.is_solvable():
+            print(ColoredText.red("\n❌ PUZZLE IS UNSOLVABLE! ❌"))
+            return SolutionInfo(status=SolutionStatus.UNSOLVABLE)
 
-            # Evaluate and collect possible moves
-            possible_moves = []
-            for direction in current_state.get_possible_moves():
-                if next_state := current_state.make_move(direction):
-                    quality, reason = self.evaluate_move(
-                        current_state, next_state, visited
-                    )
-                    possible_moves.append((direction, next_state, quality, reason))
+        total_nodes_visited = 0
 
-            # Debug output for current state
-            self.debug_print(
-                current_state, possible_moves, visited, len(current_state.path)
+        # Iterative deepening
+        for depth_limit in range(1, self.max_depth + 1):
+            print(ColoredText.blue(f"\nTrying depth limit: {depth_limit}"))
+            # Reset visited set for each depth level to give a fresh start
+            visited = set()
+            current_path = {tuple(initial_state.state)}
+            nodes_visited = 0
+
+            solution, new_nodes = self.dfs_with_depth_limit(
+                initial_state, visited, current_path, depth_limit, nodes_visited
             )
+            total_nodes_visited += new_nodes
 
-            # Check if we've reached the goal
-            if current_state.is_goal():
+            if solution:
                 print(ColoredText.green("\n🎉 GOAL STATE REACHED! 🎉"))
-                print(f"DFS: Visited {nodes_visited} nodes")
-                return SolutionInfo(current_state.path, optimal_length)
+                print(f"DFS: Visited {total_nodes_visited} nodes")
+                return SolutionInfo(
+                    status=SolutionStatus.SOLVED,
+                    moves=solution.path,
+                    optimal_length=optimal_length,
+                )
 
-            # Skip if we've exceeded max depth
-            if len(current_state.path) >= self.max_depth:
-                print(ColoredText.yellow("\nMax depth reached at this branch..."))
-                continue
-
-            # Add states to stack in reverse order (for consistent exploration)
-            next_states = []
-            for direction, next_state, quality, _ in possible_moves:
-                if quality != "BAD" and tuple(next_state.state) not in visited:
-                    visited.add(tuple(next_state.state))
-                    next_states.append(next_state)
-
-            next_states.sort(key=lambda x: len(x.path), reverse=True)
-            stack.extend(next_states)
-
-        return None  # No solution found
+        print(ColoredText.yellow("\n⚠️ NO SOLUTION FOUND! ⚠️"))
+        return SolutionInfo(status=SolutionStatus.NO_SOLUTION)

@@ -6,7 +6,6 @@ from common.utils import ColoredText, Config
 from solvers.solver import SolutionInfo
 from solvers.dfs import DFSSolver
 from solvers.bfs import BFSSolver
-from solvers.astar import AStarSolver
 
 
 def print_solution(solution: SolutionInfo, board: Board) -> None:
@@ -32,11 +31,10 @@ def get_algorithm_choice() -> str:
         print(ColoredText.cyan("\nChoose a solving algorithm:"))
         print("1. Depth-First Search (DFS)")
         print("2. Breadth-First Search (BFS)")
-        print("3. A* Search")
-        choice = input("\nEnter your choice (1-3): ").strip()
-        if choice in ["1", "2", "3"]:
-            return {"1": "dfs", "2": "bfs", "3": "astar"}[choice]
-        print(ColoredText.red("\nInvalid choice. Please enter 1, 2, or 3."))
+        choice = input("\nEnter your choice (1-2): ").strip()
+        if choice in ["1", "2"]:
+            return {"1": "dfs", "2": "bfs"}[choice]
+        print(ColoredText.red("\nInvalid choice. Please enter 1 or 2."))
 
 
 def get_initial_state() -> List[List[int]]:
@@ -110,7 +108,6 @@ def main() -> None:
     solver = {
         "dfs": DFSSolver,
         "bfs": BFSSolver,
-        "astar": AStarSolver,
     }[algorithm](board)
 
     # Attempt to solve

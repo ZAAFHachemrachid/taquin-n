@@ -9,7 +9,7 @@ class Config:
     """Global configuration settings."""
 
     ITERATION_DELAY = 1.0  # Delay between iterations (seconds)
-    MAX_DEPTH_DFS = 20  # Maximum search depth for DFS
+    MAX_DEPTH_DFS = 30  # Maximum search depth for DFS
     MAX_DEPTH_BFS = 30  # Maximum search depth for BFS
 
 
